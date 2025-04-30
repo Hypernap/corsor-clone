@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flask Code IDE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Ace Editor CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ext-language_tools.js"></script>
+</head>
+<body>
+    <div class="workspace">
+        <!-- Left Sidebar -->
+        <div class="sidebar left-sidebar">
+            <div class="sidebar-header">
+                <h2>Projects</h2>
+                <button id="upload-btn" class="btn-primary">Upload Project</button>
+                <div id="upload-form" class="hidden">
+                    <form id="project-upload-form">
+                        <input type="text" id="project-name" placeholder="Project Name" required>
+                        <input type="file" id="project-file" accept=".zip" required>
+                        <div class="button-group">
+                            <button type="submit" id="submit-upload" class="btn-primary">Upload</button>
+                            <button type="button" id="cancel-upload" class="btn-secondary">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="project-list-container">
+                <div id="projects-list"></div>
+            </div>
+            
+            <div class="sidebar-section">
+                <h2>Files</h2>
+                <div id="file-tree" class="file-tree"></div>
+            </div>
+        </div>
+        
+        <!-- Main Editor Area -->
+        <div class="main-content">
+            <div class="editor-header">
+                <div class="tabs">
+                    <div class="tab active" id="current-file-tab">No file selected</div>
+                </div>
+                <div class="editor-controls">
+                    <button id="save-btn" class="btn-primary">Save</button>
+                    <button id="run-btn" class="btn-primary">Run</button>
+                </div>
+            </div>
+            <div id="editor"></div>
+        </div>
+        
+        <!-- Right Sidebar - Chat/LLM Integration -->
+        <div class="sidebar right-sidebar">
+            <div class="sidebar-header">
+                <h2>AI Assistant</h2>
+            </div>
+            <div class="current-file-indicator" id="ai-context-file">
+                <span class="file-indicator-label">Current File:</span>
+                <span class="file-indicator-name">No file selected</span>
+            </div>
+            <div class="chat-container">
+                <div id="chat-messages"></div>
+                <div class="chat-input-container">
+                    <textarea id="chat-prompt" placeholder="Ask AI to help with your code..."></textarea>
+                    <button id="send-prompt" class="btn-primary">Send</button>
+                </div>
+            </div>
+            <div class="code-diff-container hidden" id="code-diff">
+                <h3>Suggested Changes</h3>
+                <div class="diff-container">
+                    <div id="diff-content"></div>
+                </div>
+                <div class="diff-actions">
+                    <button id="accept-diff" class="btn-primary">Apply Changes</button>
+                    <button id="reject-diff" class="btn-secondary">Reject</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Terminal Area -->
+        <div class="terminal-container">
+            <div class="terminal-header">
+                <div class="terminal-tabs">
+                    <div class="terminal-tab active">Terminal</div>
+                </div>
+                <div class="terminal-controls">
+                    <button id="clear-terminal" class="btn-secondary">Clear</button>
+                    <button id="run-current-file" class="btn-primary">Run Current File</button>
+                </div>
+            </div>
+            <div id="terminal">
+                <div id="terminal-output"></div>
+            </div>
+            <div class="terminal-input-container">
+                <div class="terminal-prompt">$</div>
+                <input type="text" id="terminal-input" placeholder="Enter command...">
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/editor/terminal.js') }}"></script>
+</body>
+</html> 
