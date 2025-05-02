@@ -85,7 +85,8 @@ class GeminiService:
             self.model = None
     
     def get_code_suggestions(self, file_content: str, file_path: str, user_prompt: str, 
-                             project_structure=None, selected_text=None, selected_range=None) -> Dict:
+                             project_structure=None, selected_text=None, selected_range=None, 
+                             explanation_mode=False) -> Dict:
         """Get code suggestions using the Gemini model.
         
         Args:
@@ -95,13 +96,14 @@ class GeminiService:
             project_structure: Optional structure of the project for context.
             selected_text: Optional selected portion of code to focus on.
             selected_range: Optional range information about the selection.
+            explanation_mode: If True, focus on explaining the code rather than modifying it.
             
         Returns:
             A dictionary containing:
             - status: "success" or "error"
             - suggestion: The suggested code (if successful)
             - diff: A unified diff between original and suggested code (if successful)
-            - explanation: Explanation of the changes (if successful)
+            - explanation: Explanation of the changes or code (if successful)
             - suggestion_for_selection: Only the modified selected text (if selection provided)
             - error: Error message (if error)
         """
@@ -132,7 +134,56 @@ class GeminiService:
             # Determine if we're working with selected text or the whole file
             is_selection_mode = selected_text and len(selected_text.strip()) > 0
             
-            if is_selection_mode:
+            # Special handling for explanation mode
+            if explanation_mode and is_selection_mode:
+                # Create a prompt specifically for explaining the selected code
+                explanation_prompt = f"""
+                You are a helpful code explainer. You will be provided with a portion of a {file_type} file and a request to explain it.
+                
+                Your task is to analyze the selected code and provide a CONCISE explanation.
+                
+                The code is part of a larger file. Here's the full context of the file to help you understand what the selected code does:
+                ```
+                {file_content}
+                ```
+                
+                Now, focus on explaining this SELECTED PORTION of the code:
+                ```
+                {selected_text}
+                ```
+                
+                USER REQUEST: {user_prompt}
+                
+                Provide a CONCISE explanation of what this code does and how it works. Format your response as follows:
+                
+                1. Purpose: [1-sentence description of what the code does]
+                2. Key points:
+                   - [Bullet point 1]
+                   - [Bullet point 2]
+                   - [Bullet point 3 if needed]
+                3. Context: [Brief explanation of how this fits into the larger file - 1-2 sentences maximum]
+                
+                Keep your explanation brief, clear, and focused on what's most important to understand.
+                """
+                
+                # Generate explanation
+                try:
+                    explanation_response = self.model.generate_content(explanation_prompt)
+                    explanation = explanation_response.text.strip()
+                    
+                    # No need for code suggestions in explanation mode
+                    return {
+                        "status": "success",
+                        "explanation": explanation
+                    }
+                except Exception as e:
+                    print(f"Error getting explanation: {e}")
+                    return {
+                        "status": "error",
+                        "error": f"Failed to generate explanation: {str(e)}"
+                    }
+            
+            elif is_selection_mode:
                 # Step 1: Get code suggestion for the selected text
                 selection_context = f"""
                 You are an expert code assistant. You will be provided with a portion of a {file_type} file and a request to modify or enhance it.

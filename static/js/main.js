@@ -17,6 +17,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Track text selection for "Send Selected" and "Explain Selected" buttons
+    editor.on("changeSelection", function() {
+        const selectedText = editor.getSelectedText();
+        const sendSelectedBtn = document.getElementById('send-selected-prompt');
+        const explainSelectedBtn = document.getElementById('explain-selected-prompt');
+        
+        if (selectedText.trim().length > 0) {
+            sendSelectedBtn.classList.remove('hidden');
+            explainSelectedBtn.classList.remove('hidden');
+        } else {
+            sendSelectedBtn.classList.add('hidden');
+            explainSelectedBtn.classList.add('hidden');
+        }
+    });
+
     // Initialize the Editor object for terminal.js to use
     window.Editor = {
         currentProject: null,
@@ -256,10 +271,46 @@ document.addEventListener('DOMContentLoaded', function() {
         chatPrompt.value = '';
 
         // Call the AI assistant API with the current file content
-        getAIResponse(prompt);
+        getAIResponse(prompt, false);
     });
 
-    function getAIResponse(prompt) {
+    // Send selected code to AI button
+    document.getElementById('send-selected-prompt').addEventListener('click', function() {
+        const prompt = chatPrompt.value.trim();
+        if (!prompt) return;
+
+        // Add user message to chat with a visual indicator that only selected code is being processed
+        const selectedText = Editor.getSelectedText();
+        const messageText = prompt + `<div class="selected-code-info">(Processing selected code: ${selectedText.length} characters)</div>`;
+        addChatMessage('user', messageText, true);
+        chatPrompt.value = '';
+
+        // Call the AI assistant API with only the selected text
+        getAIResponse(prompt, true, false);
+    });
+
+    // Explain selected code button
+    document.getElementById('explain-selected-prompt').addEventListener('click', function() {
+        const prompt = chatPrompt.value.trim();
+        const selectedText = Editor.getSelectedText();
+        
+        // Create an explanation prompt if user hasn't provided one
+        let finalPrompt = prompt;
+        if (!prompt) {
+            finalPrompt = "Please explain this code and how it works.";
+        }
+        
+        // Add user message to chat with a visual indicator that explanation was requested
+        const messageText = finalPrompt + 
+            `<div class="explanation-mode-indicator">Explaining selected code (${selectedText.length} characters)</div>`;
+        addChatMessage('user', messageText, true);
+        chatPrompt.value = '';
+
+        // Call the AI assistant API with explanation mode enabled
+        getAIResponse(finalPrompt, true, true);
+    });
+
+    function getAIResponse(prompt, selectedOnly, explanation = false) {
         // Show loading indicator
         addChatMessage('ai', 'Thinking...');
         
@@ -286,10 +337,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Prepare payload - include current file if one is open
         const payload = {
-            prompt: prompt
+            prompt: prompt,
+            selected_only: selectedOnly,
+            explanation_mode: explanation
         };
         
         if (currentFile) {
+            // Always send the full file content for context
             payload.file_path = currentFile;
             payload.file_content = originalCode;
             
@@ -462,9 +516,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const contentSpan = document.createElement('span');
         contentSpan.className = 'message-content';
         
-        // If HTML content is provided, set innerHTML instead of textContent
+        // If HTML content is provided, set innerHTML directly
         if (isHtml) {
             contentSpan.innerHTML = text;
+        } else if (sender === 'ai') {
+            // For AI responses, convert markdown-like syntax to HTML for better formatting
+            contentSpan.innerHTML = formatAIResponse(text);
         } else {
             contentSpan.textContent = text;
         }
@@ -475,6 +532,45 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Scroll to bottom
         chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+    
+    // Format AI response with markdown-like syntax
+    function formatAIResponse(text) {
+        if (!text) return '';
+        
+        // Escape HTML special characters first
+        let formatted = escapeHtml(text);
+        
+        // Process code blocks (```code```)
+        formatted = formatted.replace(/```([\s\S]*?)```/g, function(match, code) {
+            return `<pre>${code.trim()}</pre>`;
+        });
+        
+        // Process inline code (`code`)
+        formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // Process numbered lists (1. Item)
+        formatted = formatted.replace(/^(\d+\.\s.+)$/gm, '<li>$1</li>');
+        formatted = formatted.replace(/(<li>\d+\.\s.+<\/li>)+/g, function(match) {
+            return '<ol>' + match + '</ol>';
+        });
+        
+        // Process bullet points (- Item or • Item)
+        formatted = formatted.replace(/^([-•]\s.+)$/gm, '<li>$1</li>');
+        formatted = formatted.replace(/(<li>[-•]\s.+<\/li>)+/g, function(match) {
+            return '<ul>' + match + '</ul>';
+        });
+        
+        // Process bold (**text**)
+        formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        
+        // Process italics (*text*)
+        formatted = formatted.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        
+        // Convert newlines to <br> tags
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        return formatted;
     }
     
     // Format the diff with syntax highlighting

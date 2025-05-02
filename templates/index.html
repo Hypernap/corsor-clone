@@ -64,7 +64,11 @@
                 <div id="chat-messages"></div>
                 <div class="chat-input-container">
                     <textarea id="chat-prompt" placeholder="Ask AI to help with your code..."></textarea>
-                    <button id="send-prompt" class="btn-primary">Send</button>
+                    <div class="button-row">
+                        <button id="send-prompt" class="btn-primary">Send</button>
+                        <button id="send-selected-prompt" class="btn-primary hidden">Send Selected</button>
+                        <button id="explain-selected-prompt" class="btn-primary hidden">Explain Selected</button>
+                    </div>
                 </div>
             </div>
             <div class="code-diff-container hidden" id="code-diff">

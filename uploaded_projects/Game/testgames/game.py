@@ -26,7 +26,7 @@ GAME_OVER = 2
 game_state = MENU
 
 # Ball properties
-ball_side = 60  # Side length of the square ball
+ball_side = 80  # Side length of the square ball
 ball_pos = np.array([WIDTH // 2, HEIGHT // 2], dtype=np.float64)
 ball_vel = np.array([5, 5], dtype=np.float64)
 TIME_STEP = 1

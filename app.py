@@ -205,23 +205,62 @@ def ai_assistant():
     project_structure = data.get('project_structure', None)
     selected_text = data.get('selected_text', '')
     selected_range = data.get('selected_range', None)
+    selected_only = data.get('selected_only', False)
+    explanation_mode = data.get('explanation_mode', False)
     
     # If file content is provided, use Gemini for code suggestions
     if file_content and file_path:
         try:
-            # Generate context for code suggestions
+            # Modify the prompt if in explanation mode
+            if explanation_mode and selected_text:
+                # Create a specific prompt for code explanation
+                if not prompt.lower().startswith('explain') and not prompt.lower().startswith('what does') and not prompt.lower().startswith('how does'):
+                    prompt = f"Explain this code: {prompt}"
+            
+            # The GeminiService knows how to handle selections already
             result = gemini_service.get_code_suggestions(
                 file_content, 
                 file_path, 
                 prompt,
                 project_structure,
                 selected_text=selected_text,
-                selected_range=selected_range
+                selected_range=selected_range,
+                explanation_mode=explanation_mode
             )
             
             if result['status'] == 'success':
+                # Handle explanation mode
+                if explanation_mode and selected_text:
+                    # If it's an explanation request, we don't need code suggestions
+                    # We just want the explanation response
+                    return jsonify({
+                        "response": result.get('explanation', "Here's my explanation of the selected code."),
+                        "has_code_suggestion": False
+                    })
+                
+                # Force selection mode if selected_only is true and we have selected text
+                if selected_only and selected_text:
+                    if 'suggestion_for_selection' not in result:
+                        # If gemini didn't provide a specific selection replacement, use the full suggestion
+                        result['suggestion_for_selection'] = result['suggestion']
+                    
+                    # Return the suggestion specifically for the selected text
+                    return jsonify({
+                        "response": result.get('explanation', "Here's my suggested edit for the selected code."),
+                        "has_code_suggestion": True,
+                        "suggestion": result['suggestion'],
+                        "diff": result['diff'],
+                        "selection_only": True,
+                        "selection_replacement": result['suggestion_for_selection'],
+                        "selected_range": selected_range,
+                        "stats": {
+                            "additions": result.get('additions', 0),
+                            "deletions": result.get('deletions', 0),
+                            "file_name": os.path.basename(file_path)
+                        }
+                    })
                 # If selected text is being edited, we only want to modify that part
-                if selected_text and 'suggestion_for_selection' in result:
+                elif selected_text and 'suggestion_for_selection' in result:
                     # Return the suggestion specifically for the selected text
                     return jsonify({
                         "response": result.get('explanation', "Here's my suggested edit for the selected code."),
