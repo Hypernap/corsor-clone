@@ -10,6 +10,9 @@ A code editor with integrated AI code suggestions using Google's Gemini API.
 - Terminal execution
 - Google Gemini AI code suggestions
 
+## Demo
+[[Watch the video]](https://www.youtube.com/watch?v=YQQasGX7YeU)
+
 ## Setup
 
 1. Clone the repository
